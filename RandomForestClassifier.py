@@ -1,24 +1,25 @@
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.utils import shuffle
+from utilities import shuffle_in_unison
 
 class RandomForestClassifier(object):
-    def __init__(self, nb_trees: int, nb_samples: int, max_depth: int):
-        self.trees = []
-        self.nb_trees = nb_trees
-        self.nb_samples = nb_samples
+    def __init__(self, n_estimators: int, n_samples: int, max_depth: int):
+        self.estimators = []
+        self.n_estimators = n_estimators
+        self.n_samples = n_samples
         self.max_depth = max_depth
     
-    def train(self, data):
-        random_samples = map(lambda x: random_samples(data, self.nb_samples),
-         range(self.nb_trees))
-        self.trees = map(self.train_tree, random_samples)
+    def train(self, train_data, target_data):
+        X, y = train_data, target_data
+        for i in range(n_estimators):
+            tree = DecisionTreeClassifier(max_depth=self.max_depth)
+            X, y = shuffle(X, y, random_state=0)
+            tree.fit(X[:self.n_samples], y[:self.n_samples])
+            self.estimators.append(tree)
     
-    def train_tree(self, data):
-        tree = DecisionTreeClassifier(max_depth=self.max_depth)
-        tree.fit(data)
-        return tree
-
     def predict(self, data):
         predictions = []
-        for tree in self.trees:
+        for tree in self.estimators:
             predictions.append(tree.predict(data))
-        return max(predictions, key=predictions.count)
+        return max(set(predictions), key=predictions.count)
+
