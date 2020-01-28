@@ -42,6 +42,6 @@ def get_digits_labels(labels_set, count = set_count):
 
 classifier = RandomForestClassifier(10, 10 , 10)
 
-labels = get_digits_labels(labels_f)
-classifier.train(data, labels)
+# labels = get_digits_labels(labels_f)
+# classifier.train(data, labels)
 

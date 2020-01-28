@@ -8,26 +8,25 @@ C4.5 tree implementation
 
 # test
 print(len(data[0][0]))  # [example number 0:set_count-1][row number 0:size-1][column number 0:size-1]
-#test = get_digits_labels(labels_f)
-# print(test[1][1])
-#classes_t = set(test)
-# print(set(get_digits_labels(labels)))
+
 
 class C45:
     def __init__(self, dataset, labels):
-        self.dataset = dataset
+        self.preprocessed_data = dataset
         self.labels = labels
         self.examples_num = len(dataset)
-        self.attributes_num = len(dataset[0]) * len(dataset[0][0])
-        self.classes = self.get_classes(self.labels)
-        self.attributes_values = self.get_attributes_values(self.dataset)
+        self.attributes_num = len(dataset[0]) * len(dataset[0][0])  # no of pixels, multiplying columns with rows
+        self.classes = self.get_classes(labels)
+        self.attributes_values = self.get_attributes_values(self.preprocessed_data)
+        self.dataset = self.export_data_to_list()
+        self.available_attributes = [i for i in range(0, self.attributes_num)]
 
     # improve to detect single class in subset, useful in splitting in c4.5
     def get_classes(self, labels_subset):
         result = []
         for label in labels_subset:
             if label not in result:
-                result.append(label[0])  # label is np.array type
+                result.append(label.item(0))  # label is np.array type
         return result
 
     # check if dataset contains only one class data
@@ -51,10 +50,10 @@ class C45:
     def generate_subtree(self, current_data, current_attributes):
         if(len(current_data)) <= 0:
             return Node(True, "no data")
-        current_classes, is_single = self.is_single_class(current_data)
+        current_classes, is_single = self.is_single_class(current_data)  # IMPORTANT TO DEBUG
         if is_single:
             return Node(True, current_classes)
-        if len(current_attributes) == 0:  # if no attributes left, leaf
+        if len(current_attributes) == 0:  # if no attributes left then generate leaf
             return Node(True, self.get_dominant_class(current_data))
         # if considered dataset needs to be splitted
         best_attribute, splitted_sets = self.split_on_attribute(current_data, current_attributes)
@@ -90,9 +89,29 @@ class C45:
                 best_attr = attribute
         return best_attr, result_subsets
 
-    # TODO:
-    #def get_label_from_data_sample(self, sample):
-    #    data_index = self.dataset.index(sample)
+    # def get_attribute_values(self, attribute_index, current_dataset):
+    #     column_value = attribute_index % len(self.dataset[0][0])
+    #     row_value = attribute_index // len(self.dataset[0])  # floor value division
+    #     result = []
+    #     for
+    #     return row_value, column_value
+
+    def export_data_to_list(self):
+        #  result = self.preprocessed_data.tolist()
+        result = [[0 for attr in range(0, self.attributes_num + 1)] for example in range(set_count)]  # +1 for label
+        i = 0
+        j = 0
+        for example in self.preprocessed_data:
+            for row in example:
+                for pixel in row:
+                    result[i][j] = pixel.item(0)
+                    j += 1
+            result[i][j] = self.labels[i].item(0)  # append label
+            j = 0
+            i += 1
+        j = 0
+        i = 0
+        return result
 
     def entropy(self, labels):
         num_of_classes = len(self.classes)
@@ -104,14 +123,16 @@ class C45:
         for c in classes_count:
             ent += c* math.log(c)
         return -1 * ent
-        
-    
+
     def gain(self, union_set, sets):
         gain = 0
         for small_set in sets:
             gain += self.entropy(small_set) * len(small_set) / len(union_set)
         return self.entropy(union_set) - gain
-        
+
+    def fit(self):
+        self.generate_subtree(self.dataset, self.available_attributes)
+
 class Node:
     def __init__(self, is_leaf, label):
         self.is_leaf = is_leaf
@@ -119,4 +140,7 @@ class Node:
         #self.threshold = threshold
         self.children = []
 
+
 tree = C45(data, get_digits_labels(labels_f))
+#test_r, test_c = tree.get_attribute_values(74)
+tree.fit()
