@@ -90,6 +90,19 @@ class C45:
     #    data_index = self.dataset.index(sample)
 
 
+
+    def entropy(self, labels):
+        num_of_classes = len(self.classes)
+        classes_count = [0 for n in range(num_of_classes)]
+        for sample in labels:
+            classes_count[sample] += 1
+        ent = 0
+        classes_count = [x / num_of_classes for x in classes_count]
+        for c in classes_count:
+            ent += c* math.log(c)
+        return -1 * ent
+        
+
 class Node:
     def __init__(self, is_leaf, label, threshold):
         self.is_leaf = is_leaf

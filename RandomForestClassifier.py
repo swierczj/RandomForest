@@ -1,6 +1,5 @@
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.utils import shuffle
-from utilities import shuffle_in_unison
 
 class RandomForestClassifier(object):
     def __init__(self, n_estimators: int, n_samples: int, max_depth: int):
@@ -11,7 +10,7 @@ class RandomForestClassifier(object):
     
     def train(self, train_data, target_data):
         X, y = train_data, target_data
-        for i in range(n_estimators):
+        for i in range(self.n_estimators):
             tree = DecisionTreeClassifier(max_depth=self.max_depth)
             X, y = shuffle(X, y, random_state=0)
             tree.fit(X[:self.n_samples], y[:self.n_samples])

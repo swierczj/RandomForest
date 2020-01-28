@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import gzip
+from RandomForestClassifier import *
 
 images = gzip.open('train-images-idx3-ubyte.gz', 'r')
 labels_f = gzip.open('train-labels-idx1-ubyte.gz', 'r')
@@ -14,10 +15,11 @@ buf = images.read(image_size * image_size * set_count)
 data = np.frombuffer(buf, dtype=np.uint8).astype(np.float32)
 data = data.reshape(set_count, image_size, image_size, 1)
 
-for i in range(0, set_count):
-    image = np.asarray(data[i]).squeeze()
-    plt.imshow(image)
-    plt.show()
+#for i in range(0, set_count):
+ #   image = np.asarray(data[i]).squeeze()
+ #   plt.imshow(image)
+ #   plt.show()
+    
 
 labels_f.read(labels_file_offset)
 
@@ -34,3 +36,12 @@ def get_digits_labels(labels_set, count = set_count):
         labels_result.append(np.frombuffer(tmp, dtype=np.uint8).astype(np.int64))
     labels_set.close()
     return labels_result
+
+
+
+
+classifier = RandomForestClassifier(10, 10 , 10)
+
+labels = get_digits_labels(labels_f)
+classifier.train(data, labels)
+
