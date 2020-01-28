@@ -62,7 +62,7 @@ class C45:
         remaining_attributes.remove(best_attribute)
         node = Node(False, best_attribute)
         node.children = [self.generate_subtree(subset, remaining_attributes) for subset in splitted_sets]
-
+        return node
 
     def get_dominant_class(self, subdata):
         classes_frequency = [0] * len(self.classes)
@@ -83,7 +83,7 @@ class C45:
                     if example[attribute] == attribute_values[i]:
                         subsets[i].append(example)
                         break
-            entropy = information_gain(dataset, subsets)  # TODO
+            entropy = self.gain(dataset, subsets)
             if entropy > max_entropy:
                 max_entropy = entropy
                 result_subsets = subsets
@@ -93,8 +93,6 @@ class C45:
     # TODO:
     #def get_label_from_data_sample(self, sample):
     #    data_index = self.dataset.index(sample)
-
-
 
     def entropy(self, labels):
         num_of_classes = len(self.classes)
