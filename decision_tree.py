@@ -22,11 +22,11 @@ class C45:
         self.available_attributes = [i for i in range(0, self.attributes_num)]
 
     # improve to detect single class in subset, useful in splitting in c4.5
-    def get_classes(self, labels_subset):
+    def get_classes(self, subset):
         result = []
-        for label in labels_subset:
-            if label not in result:
-                result.append(label.item(0))  # label is np.array type
+        for record in subset:
+            if record[-1] not in result:
+                result.append(record[-1])
         return result
 
     # check if dataset contains only one class data
@@ -50,7 +50,7 @@ class C45:
     def generate_subtree(self, current_data, current_attributes):
         if(len(current_data)) <= 0:
             return Node(True, "no data")
-        current_classes, is_single = self.is_single_class(current_data)  # IMPORTANT TO DEBUG
+        current_classes, is_single = self.is_single_class(current_data)
         if is_single:
             return Node(True, current_classes)
         if len(current_attributes) == 0:  # if no attributes left then generate leaf
@@ -65,6 +65,11 @@ class C45:
 
     def get_dominant_class(self, subdata):
         classes_frequency = [0] * len(self.classes)
+        for example in subdata:
+            label_index = self.classes.index(example[-1])
+            classes_frequency[label_index] += 1
+        max_index = classes_frequency.index(max(classes_frequency))
+        return self.classes[max_index]
 
     # improvement needed, available_attributes needs to be list of indexes of particular attributes and example in for
     # loop is considered as list of attributes values, it won't work now, get_attribute_value() also to be written
@@ -73,8 +78,8 @@ class C45:
         max_entropy = float('-inf')
         best_attr = None
         for attribute in available_attributes:
-            attribute_index = self.dataset[0].index(attribute)
-            attribute_values = get_attribute_values(attribute)
+            attribute_index = available_attributes.index(attribute)
+            attribute_values = self.get_attribute_values(dataset, attribute_index)
             subsets = [[] for attr_v in attribute_values]
             for example in dataset:
                 # iterate through possible values of attribute, append example to particular subset if attr values match
@@ -89,12 +94,12 @@ class C45:
                 best_attr = attribute
         return best_attr, result_subsets
 
-    # def get_attribute_values(self, attribute_index, current_dataset):
-    #     column_value = attribute_index % len(self.dataset[0][0])
-    #     row_value = attribute_index // len(self.dataset[0])  # floor value division
-    #     result = []
-    #     for
-    #     return row_value, column_value
+    def get_attribute_values(self, current_dataset, attribute_index):
+        attr_values_result = []
+        for example in current_dataset:
+            if example[attribute_index] not in attr_values_result:
+                attr_values_result.append(example[attribute_index])
+        return attr_values_result
 
     def export_data_to_list(self):
         #  result = self.preprocessed_data.tolist()
