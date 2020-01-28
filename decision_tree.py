@@ -47,20 +47,20 @@ class C45:
         result.sort()  # debug purposes
         return result
 
-    def generate_subtree(self, current_data, current_attributes):
+    def generate_subtree(self, current_data, current_attributes, parent=None):
         if(len(current_data)) <= 0:
-            return Node(True, "no data")
+            return Node(True, "no data", parent)
         current_classes, is_single = self.is_single_class(current_data)
         if is_single:
-            return Node(True, current_classes)
+            return Node(True, current_classes, parent)
         if len(current_attributes) == 0:  # if no attributes left then generate leaf
-            return Node(True, self.get_dominant_class(current_data))
+            return Node(True, self.get_dominant_class(current_data), parent)
         # if considered dataset needs to be splitted
         best_attribute, splitted_sets = self.split_on_attribute(current_data, current_attributes)
         remaining_attributes = current_attributes[:]
         remaining_attributes.remove(best_attribute)
-        node = Node(False, best_attribute)
-        node.children = [self.generate_subtree(subset, remaining_attributes) for subset in splitted_sets]
+        node = Node(False, best_attribute, parent)
+        node.children = [self.generate_subtree(subset, remaining_attributes, node) for subset in splitted_sets]
         return node
 
     def get_dominant_class(self, subdata):
@@ -127,9 +127,10 @@ class C45:
         entropy = 0
         classes_count = [x / num_of_classes for x in classes_count]  # ratio of particular class occurances to no of classes observed, probality of meeting given class in dataset
         for c in classes_count:
+            print(entropy)
             entropy += c * math.log(c)
         return -1 * entropy
-
+    
     def gain(self, union_set, sets):
         gain = 0
         for small_set in sets:
@@ -139,13 +140,58 @@ class C45:
     def fit(self):
         self.generate_subtree(self.dataset, self.available_attributes)
 
-class Node:
-    def __init__(self, is_leaf, label):
-        self.is_leaf = is_leaf
-        self.label = label
-        #self.threshold = threshold
-        self.children = []
+    def prune_tree(root, node, dataset, best_score):
+        if node.is_leaf():
+            label = node.label
+            node.parent.is_leaf = True
+            node.parent.label = node.label
+            if node.height < 20:
+                new_score = validate_tree(root, dataset)
+            else:
+                new_score = 0
+    
+            if new_score >= best_score:
+                return new_score
+            else:
+                node.parent.is_leaf = False
+                node.parent.label = None
+                return best_score
+        else:
+            new_score = best_score
+            for child in node.children:
+                new_score = prune_tree(root, child, dataset, new_score)
+                if node.is_leaf:
+                    return new_score
+            return new_score
 
+    def validate_tree(self, node, dataset):
+        total = len(dataset.examples)
+        correct = 0
+        for example in dataset.examples:
+            correct += validate_example(node, example)
+        return correct/total
+
+
+    def validate_example(self, node, example):
+        if (node.is_leaf == True):
+            predicted = node.classification
+            actual = int(example[-1])
+            if predicted == actual: 
+                return 1
+            return 0
+        value = example[node.attr_split_index]
+        if value >= node.attr_split_value:
+            return validate_example(node.upper_child, example)
+        else:
+            return validate_example(node.lower_child, example)
+class Node:
+    def __init__(self, is_leaf, label, parent=None):
+        self.label = label
+        self.children = []
+        self.is_leaf = is_leaf
+        self.parent = parent
+    #def is_leaf(self):
+    #   return len(self.children) == 0
 
 tree = C45(data, get_digits_labels(labels_f))
 #test_r, test_c = tree.get_attribute_values(74)
