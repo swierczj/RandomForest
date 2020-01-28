@@ -107,7 +107,13 @@ class C45:
             ent += c* math.log(c)
         return -1 * ent
         
-
+    
+    def gain(self, union_set, sets):
+        gain = 0
+        for small_set in sets:
+            gain += self.entropy(small_set) * len(small_set) / len(union_set)
+        return self.entropy(union_set) - gain
+        
 class Node:
     def __init__(self, is_leaf, label):
         self.is_leaf = is_leaf
