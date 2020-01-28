@@ -87,7 +87,7 @@ class C45:
                     if example[attribute] == attribute_values[i]:
                         subsets[i].append(example)
                         break
-            entropy = self.gain(dataset, subsets)
+            entropy = self.gain(dataset, subsets)  # to debug, empty set was calculated
             if entropy > max_entropy:
                 max_entropy = entropy
                 result_subsets = subsets
@@ -118,16 +118,17 @@ class C45:
         i = 0
         return result
 
-    def entropy(self, labels):
+    def entropy(self, dataset):
         num_of_classes = len(self.classes)
         classes_count = [0 for n in range(num_of_classes)]
-        for sample in labels:
-            classes_count[sample] += 1
-        ent = 0
-        classes_count = [x / num_of_classes for x in classes_count]
+        for sample in dataset:
+            class_index = self.classes.index(sample[-1])
+            classes_count[class_index] += 1
+        entropy = 0
+        classes_count = [x / num_of_classes for x in classes_count]  # ratio of particular class occurances to no of classes observed, probality of meeting given class in dataset
         for c in classes_count:
-            ent += c* math.log(c)
-        return -1 * ent
+            entropy += c * math.log(c)
+        return -1 * entropy
 
     def gain(self, union_set, sets):
         gain = 0
