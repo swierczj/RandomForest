@@ -50,14 +50,19 @@ class C45:
 
     def generate_subtree(self, current_data, current_attributes):
         if(len(current_data)) <= 0:
-            return Node(True, "no data", None)
+            return Node(True, "no data")
         current_classes, is_single = self.is_single_class(current_data)
         if is_single:
-            return Node(True, current_classes, None)
-        if len(current_attributes) == 0:  # if no attributes left
-            return Node(True, self.get_dominant_class(current_data), None)
+            return Node(True, current_classes)
+        if len(current_attributes) == 0:  # if no attributes left, leaf
+            return Node(True, self.get_dominant_class(current_data))
         # if considered dataset needs to be splitted
         best_attribute, splitted_sets = self.split_on_attribute(current_data, current_attributes)
+        remaining_attributes = current_attributes[:]
+        remaining_attributes.remove(best_attribute)
+        node = Node(False, best_attribute)
+        node.children = [self.generate_subtree(subset, remaining_attributes) for subset in splitted_sets]
+
 
     def get_dominant_class(self, subdata):
         classes_frequency = [0] * len(self.classes)
@@ -104,9 +109,10 @@ class C45:
         
 
 class Node:
-    def __init__(self, is_leaf, label, threshold):
+    def __init__(self, is_leaf, label):
         self.is_leaf = is_leaf
         self.label = label
-        self.threshold = threshold
+        #self.threshold = threshold
+        self.children = []
 
 tree = C45(data, get_digits_labels(labels_f))
