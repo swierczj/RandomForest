@@ -156,17 +156,23 @@ class C45:
         mismatches = 0
         error_rate = 0
         for sample in dataset:
+<<<<<<< Updated upstream
+=======
+            node = self.root
+>>>>>>> Stashed changes
             while not node.is_leaf:
                 error = float('inf')
                 attr_index = node.label
                 current_best = -1
                 for child in node.children:
-                    if sample[attr_index] == child.prev_attr_value:
-                        node = child
+                    if sample[attr_index] == child.prev_attr_value[0]:
+                        current_best = node.children.index(child)
                         break
                     else:
                         # current_best = node.children.index(child)
-                        current_error = abs(sample[attr_index] - child.prev_attr_value)
+                        current_attr_val = sample[attr_index]
+                        prev_val = child.prev_attr_value[0]
+                        current_error = abs(sample[attr_index] - child.prev_attr_value[0])
                         if current_error < error:
                             current_best = node.children.index(child)
                             error = current_error

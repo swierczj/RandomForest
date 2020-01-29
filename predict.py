@@ -48,4 +48,8 @@ labels_test_set.close()
 test_dataset = export_data(test_data, test_attr_num, test_count, labels_test)
 
 tree = C45(data, get_digits_labels(labels_f))
+<<<<<<< Updated upstream
 tree.predict(data)
+=======
+tree.predict(test_dataset)
+>>>>>>> Stashed changes
