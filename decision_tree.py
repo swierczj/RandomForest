@@ -80,6 +80,8 @@ class C45:
         for attribute in available_attributes:
             attribute_index = available_attributes.index(attribute)
             attribute_values = self.get_attribute_values(dataset, attribute_index)
+            if len(attribute_values) > 5:
+                print('debug')
             subsets = [[] for attr_v in attribute_values]
             for example in dataset:
                 # iterate through possible values of attribute, append example to particular subset if attr values match
@@ -119,16 +121,19 @@ class C45:
         return result
 
     def entropy(self, dataset):
-        num_of_classes = len(self.classes)
-        classes_count = [0 for n in range(num_of_classes)]
+        set_quantity = len(dataset)
+        if set_quantity == 0:
+            return 0
+        classes_count = [0 for n in self.classes]
         for sample in dataset:
             class_index = self.classes.index(sample[-1])
             classes_count[class_index] += 1
         entropy = 0
-        classes_count = [x / num_of_classes for x in classes_count]  # ratio of particular class occurances to no of classes observed, probality of meeting given class in dataset
+        classes_count = [x / set_quantity for x in classes_count]  # ratio of particular class occurances to set quant, probality of meeting given class in dataset
         for c in classes_count:
             print(entropy)
-            entropy += c * math.log(c)
+            if c > 0:
+                entropy += c * math.log(c)
         return -1 * entropy
     
     def gain(self, union_set, sets):
