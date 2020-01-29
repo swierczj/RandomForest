@@ -156,7 +156,7 @@ class C45:
         mismatches = 0
         error_rate = 0
         for sample in dataset:
-            while not node.is_leaf():
+            while not node.is_leaf:
                 error = float('inf')
                 attr_index = node.label
                 current_best = -1
@@ -190,11 +190,11 @@ class C45:
             node.parent.is_leaf = True
             node.parent.label = node.label
             if node.height < 20:
-                new_score = validate_tree(root, dataset)
+                new_score = self.predict(root, dataset)
             else:
                 new_score = 0
     
-            if new_score >= best_score:
+            if new_score <= best_score:
                 return new_score
             else:
                 node.parent.is_leaf = False
@@ -208,26 +208,7 @@ class C45:
                     return new_score
             return new_score
 
-    def validate_tree(self, node, dataset):
-        total = len(dataset.examples)
-        correct = 0
-        for example in dataset.examples:
-            correct += validate_example(node, example)
-        return correct/total
 
-
-    def validate_example(self, node, example):
-        if (node.is_leaf == True):
-            predicted = node.classification
-            actual = int(example[-1])
-            if predicted == actual: 
-                return 1
-            return 0
-        value = example[node.attr_split_index]
-        if value >= node.attr_split_value:
-            return validate_example(node.upper_child, example)
-        else:
-            return validate_example(node.lower_child, example)
 class Node:
     def __init__(self, is_leaf, label, prev_attr_value, parent=None):
         self.label = label
