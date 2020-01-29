@@ -6,7 +6,7 @@ from RandomForestClassifier import *
 images = gzip.open('train-images-idx3-ubyte.gz', 'r')
 labels_f = gzip.open('train-labels-idx1-ubyte.gz', 'r')
 image_size = 28
-set_count = 10
+set_count = 20
 images_file_offset = 16  # non image information
 labels_file_offset = 8
 

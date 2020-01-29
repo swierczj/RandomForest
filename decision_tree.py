@@ -20,6 +20,7 @@ class C45:
         self.attributes_values = self.get_attributes_values(self.preprocessed_data)
         self.dataset = self.export_data_to_list()
         self.available_attributes = [i for i in range(0, self.attributes_num)]
+        self.root = self.generate_subtree(self.dataset, self.available_attributes)
 
     # improve to detect single class in subset, useful in splitting in c4.5
     def get_classes(self, subset):
@@ -80,8 +81,8 @@ class C45:
         for attribute in available_attributes:
             attribute_index = available_attributes.index(attribute)
             attribute_values = self.get_attribute_values(dataset, attribute_index)
-            if len(attribute_values) > 5:
-                print('debug')
+            # if len(attribute_values) > 5:
+            #    print('debug')
             subsets = [[] for attr_v in attribute_values]
             for example in dataset:
                 # iterate through possible values of attribute, append example to particular subset if attr values match
@@ -89,7 +90,7 @@ class C45:
                     if example[attribute] == attribute_values[i]:
                         subsets[i].append(example)
                         break
-            entropy = self.gain(dataset, subsets)  # to debug, empty set was calculated
+            entropy = self.gain(dataset, subsets)
             if entropy > max_entropy:
                 max_entropy = entropy
                 result_subsets = subsets
@@ -143,7 +144,8 @@ class C45:
         return self.entropy(union_set) - gain
 
     def fit(self):
-        self.generate_subtree(self.dataset, self.available_attributes)
+        root = self.generate_subtree(self.dataset, self.available_attributes)
+        print('trained')
 
     def prune_tree(root, node, dataset, best_score):
         if node.is_leaf():
@@ -199,5 +201,4 @@ class Node:
     #   return len(self.children) == 0
 
 tree = C45(data, get_digits_labels(labels_f))
-#test_r, test_c = tree.get_attribute_values(74)
-tree.fit()
+print(tree.root.label)
