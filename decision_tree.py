@@ -151,6 +151,35 @@ class C45:
             gain += self.entropy(small_set) * len(small_set) / len(union_set)
         return self.entropy(union_set) - gain
 
+    def predict(self, dataset):
+        node = self.root
+        mismatches = 0
+        error_rate = 0
+        for sample in dataset:
+            while not node.is_leaf():
+                error = float('inf')
+                attr_index = node.label
+                current_best = -1
+                for child in node.children:
+                    if sample[attr_index] == child.prev_attr_value:
+                        node = child
+                        break
+                    else:
+                        # current_best = node.children.index(child)
+                        current_error = abs(sample[attr_index] - child.prev_attr_value)
+                        if current_error < error:
+                            current_best = node.children.index(child)
+                            error = current_error
+                node = node.children[current_best]
+            # node is leaf now
+            prediction_value = node.label
+            print('sample ', dataset.index(sample) + 1, ' predicted value: ', prediction_value, '; actual value: ', sample[-1])
+            if prediction_value != sample[-1]:
+                mismatches += 1
+        error_rate = mismatches / len(dataset)
+        print('error rate: ', error_rate * 100, '%')
+        return error_rate
+
     # def fit(self):
     #     root = self.generate_subtree(self.dataset, self.available_attributes)
     #     print('trained')
@@ -209,5 +238,5 @@ class Node:
     #def is_leaf(self):
     #   return len(self.children) == 0
 
-tree = C45(data, get_digits_labels(labels_f))
-print(tree.root.label)
+# tree = C45(data, get_digits_labels(labels_f))
+# print(tree.root.label)
