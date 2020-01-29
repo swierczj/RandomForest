@@ -50,17 +50,24 @@ class C45:
 
     def generate_subtree(self, current_data, current_attributes, parent=None):
         if(len(current_data)) <= 0:
-            return Node(True, "no data", parent)
+            return Node(True, "no data", -1, parent)
         current_classes, is_single = self.is_single_class(current_data)
         if is_single:
-            return Node(True, current_classes, parent)
+            if parent is not None:
+                prev_attr_val = self.get_attribute_values(current_data, parent.label)
+                return Node(True, current_classes, prev_attr_val, parent)
+            return Node(True, current_classes, -1, parent)
         if len(current_attributes) == 0:  # if no attributes left then generate leaf
-            return Node(True, self.get_dominant_class(current_data), parent)
+            return Node(True, self.get_dominant_class(current_data), -1, parent)
         # if considered dataset needs to be splitted
         best_attribute, splitted_sets = self.split_on_attribute(current_data, current_attributes)
         remaining_attributes = current_attributes[:]
         remaining_attributes.remove(best_attribute)
-        node = Node(False, best_attribute, parent)
+        if parent is not None:  # marking node with value of attribute which splitted dataset
+            prev_attribute_val = self.get_attribute_values(current_data, parent.label)
+            node = Node(False, best_attribute, prev_attribute_val, parent)
+        else:
+            node = Node(False, best_attribute, -1, parent)
         node.children = [self.generate_subtree(subset, remaining_attributes, node) for subset in splitted_sets]
         return node
 
@@ -95,6 +102,7 @@ class C45:
                 max_entropy = entropy
                 result_subsets = subsets
                 best_attr = attribute
+        print('best attribute: ', best_attr, 'entropy: ', max_entropy)
         return best_attr, result_subsets
 
     def get_attribute_values(self, current_dataset, attribute_index):
@@ -132,7 +140,7 @@ class C45:
         entropy = 0
         classes_count = [x / set_quantity for x in classes_count]  # ratio of particular class occurances to set quant, probality of meeting given class in dataset
         for c in classes_count:
-            print(entropy)
+            # print(entropy)
             if c > 0:
                 entropy += c * math.log(c)
         return -1 * entropy
@@ -143,9 +151,9 @@ class C45:
             gain += self.entropy(small_set) * len(small_set) / len(union_set)
         return self.entropy(union_set) - gain
 
-    def fit(self):
-        root = self.generate_subtree(self.dataset, self.available_attributes)
-        print('trained')
+    # def fit(self):
+    #     root = self.generate_subtree(self.dataset, self.available_attributes)
+    #     print('trained')
 
     def prune_tree(root, node, dataset, best_score):
         if node.is_leaf():
@@ -192,8 +200,9 @@ class C45:
         else:
             return validate_example(node.lower_child, example)
 class Node:
-    def __init__(self, is_leaf, label, parent=None):
+    def __init__(self, is_leaf, label, prev_attr_value, parent=None):
         self.label = label
+        self.prev_attr_value = prev_attr_value
         self.children = []
         self.is_leaf = is_leaf
         self.parent = parent
