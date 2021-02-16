@@ -2,12 +2,12 @@ import gzip
 import numpy as np
 
 from decision_tree import C45
-from digits_visualisation import data, get_digits_labels, labels_f, images, images_file_offset, image_size, set_count, \
+from digits import data, get_digits_labels, labels_f, images, images_file_offset, image_size, set_count, \
     labels_file_offset
 
 
 def export_data(dataset, attr_num, set_cardinality, classes):
-    result = [[0 for attr in range(0, attr_num + 1)] for example in range(set_cardinality)]  # +1 for label
+    result = [[0 for attr in range(0, attr_num + 1)] for example in range(set_cardinality)]  # +1 for digit label
     i = 0
     j = 0
     for sample in dataset:
@@ -21,6 +21,7 @@ def export_data(dataset, attr_num, set_cardinality, classes):
     j = 0
     i = 0
     return result
+
 
 test_attr_num = 784
 offset = set_count
@@ -48,8 +49,6 @@ labels_test_set.close()
 test_dataset = export_data(test_data, test_attr_num, test_count, labels_test)
 
 tree = C45(data, get_digits_labels(labels_f))
-<<<<<<< Updated upstream
-tree.predict(data)
-=======
+
+# tree.predict(data)
 tree.predict(test_dataset)
->>>>>>> Stashed changes
