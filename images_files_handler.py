@@ -34,24 +34,25 @@ class ImagesFilesHandler:
             labels.seek(self._labels_file_offset + start_from)  # move file handle position to start from desired label
             for i in range(set_count):
                 buf = labels.read(self._label_size)  # read one label at once
-                label = np.frombuffer(buf, dtype=np.uint8)  # check type in dbg
+                label = np.frombuffer(buf, dtype=np.uint8)
                 result_set[i] = label
         return result_set
 
     def _get_fname_and_set_count(self, set_count, starting_pos, from_training_set, getting_images):
+        # getting data from predefined training set
         if from_training_set:
             if getting_images:
                 set_fname = self._training_images_filename
             else:
                 set_fname = self._training_labels_filename
             max_count = self._max_train_images_count
+        # getting data from predefined test set
         else:
             if getting_images:
                 set_fname = self._test_images_filename
             else:
                 set_fname = self._test_labels_filename
             max_count = self._max_test_images_count
-        # check if images/labels can be read
         diff = max_count - starting_pos
         # if there's less remaining images/labels in set than desired number, then then read only the remaining img/lbl
         if diff < set_count:

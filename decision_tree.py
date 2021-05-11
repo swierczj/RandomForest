@@ -1,254 +1,146 @@
-import math
 import numpy as np
-
-# from digits import data, set_count, get_digits_labels, labels_f  # , labels_values
+from subset import Subset
+from image_data_representation import ImageDataRep
 from collections import defaultdict
 
 '''
 C4.5 tree implementation
 '''
 
-# test
-# print(len(data[0][0]))  # [example number 0:set_count-1][row number 0:size-1][column number 0:size-1]
-
 
 class C45:
     def __init__(self, dataset, labels):
-        # cleanup here
         self._dataset = dataset
         self._labels = labels
         self._examples_num = len(dataset)
         self._attributes_num = 784  # number of pixels in one image
-        self._classes = np.unique(self._labels) # todo: cleanup from here and remove get_classes
+        self._classes = np.unique(self._labels)
+        self._imgs_to_labels = self._init_imgs_data()  # images data representation subset, here it's whole set
         self._min_attribute_val = 0.0
         self._max_attribute_val = 255.0
-        self._attributes_values = self.get_attributes_values(self._dataset)
-        # todo:
-        # self.available_attributes = [i for i in range(0, self.attributes_num)]
-        # self.root = self.generate_subtree(self.dataset, self.available_attributes)
+        self._attributes_values = self._get_attributes_values(self._imgs_to_labels)
+        self._available_attributes = np.arange(self._attributes_num)
+        self.root = self._generate_subtree(self._imgs_to_labels, self._available_attributes)
+        # todo: c45 - prune id3 tree represented by root
 
-    # # improve to detect single class in subset, useful in splitting in c4.5
-    # def get_classes(self, subset):
-    #     result = []
-    #     for record in subset:
-    #         if record[-1] not in result:
-    #             result.append(record[-1])
-    #     return result
-    #
-    # # check if dataset contains only one class data
-    # def is_single_class(self, dataset):
-    #     classes = self.get_classes(dataset)
-    #     if len(classes) == 1:
-    #         return classes, True
-    #     return classes, False
+    def _get_image_data(self, img_idx):
+        return self._dataset[img_idx]
 
-    def _is_single_class(self, labels: np.array):
-        return len(np.unique(labels)) == 1
+    def _init_imgs_data(self):
+        result = Subset()
+        dataset_count = len(self._dataset)
+        for img_idx in range(dataset_count):
+            current_data = ImageDataRep(img_idx, self._labels[img_idx])
+            result.add_element(current_data)
+        return result
 
-    # improve to get atrr values in subset
-    def get_attributes_values(self, subset):
-        max_count_values = int(self._max_attribute_val + 1)
-        result = np.full(max_count_values, -1.0)
-        attr_index = 0
-        for instance in subset:
-            distinct_values = np.unique(instance)
-            sets_diff = np.setdiff1d(distinct_values, result)
-            ending_index = attr_index + len(sets_diff)
-            result[attr_index:ending_index] = sets_diff
-            # if there's no -1.0 then all slots has been filled with pixels
-            if -1.0 not in result:
-                attr_index = max_count_values
+    def _get_attributes_values(self, subset):
+        unique_vals = set()
+        max_set_size = int(self._max_attribute_val + 1)
+        for sample in subset:
+            # extract specific image data
+            img_data = self._get_image_data(sample.get_og_index())
+            distinct_attributes_vals = np.unique(np.ravel(img_data))
+            unique_vals.update(distinct_attributes_vals)
+            # if set cannot be extended anymore then exit the loop
+            if len(unique_vals) == max_set_size:
                 break
-            attr_index = ending_index
-        result = result[:attr_index]  # trim zeros from back <- change it to trim -1s, get -1 index earlier and return slice
+        result = np.fromiter(unique_vals, dtype=float)
         result.sort()
         return result
 
-    def generate_subtree(self, current_data, current_attributes, parent=None):
-        if (len(current_data)) <= 0:
-            return Node(True, "no data", -1, parent)
-        current_classes, is_single = self.is_single_class(current_data)
-        if is_single:
-            if parent is not None:
-                prev_attr_val = self.get_attribute_values(current_data, parent.label)
-                return Node(True, current_classes, prev_attr_val, parent)
-            return Node(True, current_classes, -1, parent)
-        if len(current_attributes) == 0:  # if no attributes left then generate leaf
-            return Node(True, self.get_dominant_class(current_data), -1, parent)
+    # todo: test every if else
+    def _generate_subtree(self, current_data: Subset, current_attributes, parent=None):
+        # if no data has been passed
+        if len(current_data) == 0:
+            return Node(label="no-data", attr_idx=None, parent=parent)
+        dominant_class, dominant_class_occurrences = self._get_dominant_class(current_data)
+        # if there's only one class in all instances or no attributes left then generate leaf
+        if dominant_class_occurrences == len(current_data) or len(current_attributes) == 0:
+            subtree_root = Node(label=dominant_class, attr_idx=None, parent=parent)
         # if considered dataset needs to be splitted
-        best_attribute, splitted_sets = self.split_on_attribute(current_data, current_attributes)
-        remaining_attributes = current_attributes[:]
-        remaining_attributes.remove(best_attribute)
-        if parent is not None:  # marking node with value of attribute which splitted dataset
-            prev_attribute_val = self.get_attribute_values(current_data, parent.label)
-            node = Node(False, best_attribute, prev_attribute_val, parent)
         else:
-            node = Node(False, best_attribute, -1, parent)
-        node.children = [self.generate_subtree(subset, remaining_attributes, node) for subset in splitted_sets]
-        return node
+            best_attribute, splitted_sets = self._find_best_split(current_attributes, current_data)
+            remaining_attributes = current_attributes[current_attributes != best_attribute]  # remove best attribute, without copying existing array
+            node_label = None
+            if parent is None:
+                node_label = "root"
+            subtree_root = Node(label=node_label, attr_idx=best_attribute, parent=parent)
+            subtree_root.children = {attr_val: self._generate_subtree(splitted_sets[attr_val], remaining_attributes, subtree_root) for attr_val in splitted_sets}
+        return subtree_root
 
-    def get_dominant_class(self, subdata):
-        classes_frequency = [0] * len(self.classes)
+    def _get_dominant_class(self, subdata: Subset):
+        classes_frequency = {label: 0 for label in self._classes}
         for example in subdata:
-            label_index = self.classes.index(example[-1])
-            classes_frequency[label_index] += 1
-        max_index = classes_frequency.index(max(classes_frequency))
-        return self.classes[max_index]
+            label = example.get_label()
+            classes_frequency[label] += 1
+        dominant_class = max(classes_frequency, key=classes_frequency.get)
+        return dominant_class, classes_frequency[dominant_class]
 
-    # improvement needed, available_attributes needs to be list of indexes of particular attributes and example in for
-    # loop is considered as list of attributes values, it won't work now, get_attribute_value() also to be written
-    def split_on_attribute(self, dataset, available_attributes):
-        result_subsets = []  # elements of subsets as elements of list
-        max_entropy = float('-inf')
+    # function that provides values of particular attribute within the whole subset
+    def _get_attribute_values(self, current_dataset: Subset, attribute_index):
+        unique_vals = set()
+        for sample in current_dataset:
+            img_data = self._get_image_data(sample.get_og_index())
+            attribute_val = np.ravel(img_data)[attribute_index]
+            unique_vals.add(attribute_val)
+        attr_existing_values = np.fromiter(unique_vals, dtype=float)
+        return attr_existing_values
+
+    def _find_best_split(self, current_attributes, current_subset: Subset):
+        current_max_gain = np.NINF
         best_attr = None
-        for attribute in available_attributes:
-            subsets = self.generate_subsets(dataset, attribute)  # 2, to avoid traversing through dataset too many times
-            # subsets working
-            # attribute_index = available_attributes.index(attribute)  # 1 it's variable called attribute
-            # attribute_values = self.get_attribute_values(dataset, attribute_index) # keys in subsets dict
-            # if len(attribute_values) > 5:
-            #    print('debug')
-            # subsets = [[] for attr_v in attribute_values]
-            for example in dataset:
-                # iterate through possible values of attribute, append example to particular subset if attr values match
-                # if only one attr value then append whole data
-                for i in range(0, len(subsets)):  # for every different attribute value
-                    if example[attribute] == attribute_values[i]:  # if example attr's value matches one of attr_values
-                        subsets[i].append(example)  # then append this example to corresponding subset
-                        break
-            entropy = self.gain(dataset, subsets)  # calculate InfGain based on this set partition
-            if entropy > max_entropy:
-                max_entropy = entropy
-                result_subsets = subsets
+        result_subsets = defaultdict(Subset)
+        presplit_set_size = len(current_subset)
+        presplit_set_entropy = self._entropy(current_subset)
+        for attribute in current_attributes:
+            attribute_subsets = self._generate_subsets(current_subset, attribute)
+            inf_gain = self._gain(presplit_set_entropy, presplit_set_size, attribute_subsets)
+            if inf_gain > current_max_gain:
+                current_max_gain = inf_gain
+                result_subsets = attribute_subsets
                 best_attr = attribute
-        print('best attribute: ', best_attr, 'entropy: ', max_entropy)
         return best_attr, result_subsets
 
-    def generate_subsets(self, curr_data, attr):
-        subsets = defaultdict(list)  # key will be attribute value and value will be index of example in subset
+    def _generate_subsets(self, curr_data: Subset, attr):
+        attr_value_subsets = defaultdict(Subset)  # mapping subset indices to specific attribute value
         for example in curr_data:
-            example_index = curr_data.index(example)
-            attr_value = example[attr]
-            subsets[attr_value].append(example_index)
-        return subsets
+            img_data = self._get_image_data(example.get_og_index())
+            attr_value = np.ravel(img_data)[attr]
+            attr_value_subsets[attr_value].add_element(example)
+        return attr_value_subsets
 
-    def get_attribute_values(self, current_dataset, attribute_index):
-        attr_values_result = []
-        for example in current_dataset:
-            if example[attribute_index] not in attr_values_result:
-                attr_values_result.append(example[attribute_index])
-        return attr_values_result
-
-    # # [for column in preprocessed append(costam)]
-    # def export_data_to_list(self):
-    #     #  result = self.preprocessed_data.tolist()
-    #     result = [[0 for attr in range(0, self.attributes_num + 1)] for example in range(set_count)]  # +1 for label column
-    #     i = 0
-    #     j = 0
-    #     for example in self.preprocessed_data:
-    #         for row in example:
-    #             for pixel in row:
-    #                 result[i][j] = pixel.item(0)
-    #                 j += 1
-    #         result[i][j] = self.labels[i].item(0)  # append label
-    #         j = 0
-    #         i += 1
-    #     return result
-
-    def entropy(self, dataset):
-        set_quantity = len(dataset)
-        if set_quantity == 0:
-            return 0
-        classes_count = [0 for n in self.classes]
+    def _entropy(self, dataset):
+        dataset_entropy = 0
+        set_size = len(dataset)
+        classes_count = defaultdict(int)
+        # populate classes_count
         for sample in dataset:
-            class_index = self.classes.index(sample[-1])
-            classes_count[class_index] += 1
-        entropy = 0
-        classes_count = [x / set_quantity for x in
-                         classes_count]  # ratio of particular class occurances to set quant, probality of meeting given class in dataset
-        for c in classes_count:
-            # print(entropy)
-            if c > 0:
-                entropy += c * math.log(c)
-        return -1 * entropy
+            sample_label = sample.get_label()
+            classes_count[sample_label] += 1
+        classes_probability = {label: class_count / set_size for label, class_count in classes_count.items()}
+        for label in classes_probability:
+            class_prob = classes_probability[label]
+            dataset_entropy += class_prob * np.log(class_prob)
+        return -dataset_entropy
 
-    def gain(self, union_set, sets):
-        gain = 0
-        for small_set in sets:
-            gain += self.entropy(small_set) * len(small_set) / len(union_set)
-        return self.entropy(union_set) - gain
-
-    def predict(self, dataset):
-        node = self.root
-        mismatches = 0
-        error_rate = 0
-        for sample in dataset:
-            node = self.root
-            while not node.is_leaf:
-                error = float('inf')
-                attr_index = node.label
-                current_best = -1
-                for child in node.children:
-                    if sample[attr_index] == child.prev_attr_value[0]:
-                        current_best = node.children.index(child)
-                        break
-                    else:
-                        # current_best = node.children.index(child)
-                        current_attr_val = sample[attr_index]
-                        prev_val = child.prev_attr_value[0]
-                        current_error = abs(sample[attr_index] - child.prev_attr_value[0])
-                        if current_error < error:
-                            current_best = node.children.index(child)
-                            error = current_error
-                node = node.children[current_best]
-            # node is leaf now
-            prediction_value = node.label[0]
-            print('sample ', dataset.index(sample) + 1, ' predicted value: ', prediction_value, '; actual value: ',
-                  sample[-1])
-            if prediction_value != sample[-1]:
-                mismatches += 1
-        error_rate = mismatches / len(dataset)
-        print('error rate: ', error_rate * 100, '%')
-        return error_rate
-
-    # def fit(self):
-    #     root = self.generate_subtree(self.dataset, self.available_attributes)
-    #     print('trained')
-
-    def prune_tree(root, node, dataset, best_score):
-        if node.is_leaf():
-            label = node.label
-            node.parent.is_leaf = True
-            node.parent.label = node.label
-            if node.height < 20:
-                new_score = self.predict(root, dataset)
-            else:
-                new_score = 0
-
-            if new_score <= best_score:
-                return new_score
-            else:
-                node.parent.is_leaf = False
-                node.parent.label = None
-                return best_score
-        else:
-            new_score = best_score
-            for child in node.children:
-                new_score = prune_tree(root, child, dataset, new_score)
-                if node.is_leaf:
-                    return new_score
-            return new_score
+    def _gain(self, union_set_entropy, union_set_size, sets: defaultdict):
+        subsets_entropy = 0
+        for attr_val, subset in sets.items():
+            subsets_entropy += self._entropy(subset) * len(subset)
+        splitted_set_entropy = subsets_entropy / union_set_size
+        return union_set_entropy - splitted_set_entropy  # inf_gain is the difference of entropy of set without partition and splitted set
 
 
 class Node:
-    def __init__(self, is_leaf, label, prev_attr_value, parent=None):
+    def __init__(self, label, attr_idx, parent=None):
         self.label = label
-        self.prev_attr_value = prev_attr_value
-        self.children = []
-        self.is_leaf = is_leaf
+        self._splitting_attribute = attr_idx
         self.parent = parent
-    # def is_leaf(self):
-    #   return len(self.children) == 0
+        self.children = defaultdict(Node)
 
-# tree = C45(data, get_digits_labels(labels_f))
-# print(tree.root.label)
+    def is_leaf(self):
+        return len(self.children) == 0
+
+    def get_attribute(self):
+        return self._splitting_attribute
